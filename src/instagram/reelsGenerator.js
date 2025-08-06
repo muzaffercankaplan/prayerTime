@@ -212,11 +212,11 @@ async function createPrayerOverlayImage(
   const canvas = createCanvas(cardW, cardH);
   const ctx = canvas.getContext("2d");
 
-  // Dua card arka planı - daha opak ve dua temasına uygun
-  ctx.fillStyle = "#2d1b69"; // Koyu mor - dua teması
+  // Dua card arka planı - daha hoş renk
+  ctx.fillStyle = "#1a1a2e"; // Koyu lacivert - daha şık
   ctx.globalAlpha = 0.95; // Neredeyse tam opak
-  // Yuvarlatılmış dikdörtgen (border-radius)
-  const radius = Math.floor(cardH * 0.1);
+  // Yuvarlatılmış dikdörtgen (border-radius) - daha küçük radius
+  const radius = Math.floor(cardH * 0.05); // Radius kısaltıldı
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(radius, 0);
@@ -339,26 +339,29 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
  */
 function drawPrayerDecorations(ctx, width, height) {
   // Köşelerde dua temasına uygun dekoratif elementler
-  const cornerSize = Math.min(width, height) * 0.08;
+  const cornerSize = Math.min(width, height) * 0.12; // Boyut artırıldı
+  const margin = Math.min(width, height) * 0.05; // Kenar boşluğu
 
   // Altın rengi
   ctx.fillStyle = "#d4af37";
-  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = "#d4af37";
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.85; // Opaklık ayarlandı
 
-  // Sol üst köşe
-  drawCornerDecoration(ctx, cornerSize, cornerSize, cornerSize);
+  // Sol üst köşe - daha sola ve yukarı
+  drawCornerDecoration(ctx, margin, margin, cornerSize);
 
-  // Sağ üst köşe
-  drawCornerDecoration(ctx, width - cornerSize, cornerSize, cornerSize);
+  // Sağ üst köşe - daha yukarı
+  drawCornerDecoration(ctx, width - cornerSize - margin, margin, cornerSize);
 
-  // Sol alt köşe
-  drawCornerDecoration(ctx, cornerSize, height - cornerSize, cornerSize);
+  // Sol alt köşe - daha sola
+  drawCornerDecoration(ctx, margin, height - cornerSize - margin, cornerSize);
 
-  // Sağ alt köşe
+  // Sağ alt köşe - daha sola ve yukarı
   drawCornerDecoration(
     ctx,
-    width - cornerSize,
-    height - cornerSize,
+    width - cornerSize - margin,
+    height - cornerSize - margin,
     cornerSize
   );
 
@@ -390,17 +393,55 @@ function drawCornerDecoration(ctx, x, y, size) {
   ctx.save();
   ctx.translate(x, y);
 
-  // İslami geometrik desen
+  // İslami geometrik desen - daha estetik ve düzgün
+  const innerSize = size * 0.6;
+  const margin = (size - innerSize) / 2;
+
+  // Dış çerçeve
   ctx.beginPath();
   ctx.moveTo(0, 0);
   ctx.lineTo(size, 0);
   ctx.lineTo(size, size);
   ctx.lineTo(0, size);
   ctx.closePath();
+  ctx.stroke();
 
-  // İç kısımda küçük bir daire
+  // İç geometrik desen
   ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size / 4, 0, 2 * Math.PI);
+  ctx.moveTo(margin, margin);
+  ctx.lineTo(margin + innerSize, margin);
+  ctx.lineTo(margin + innerSize, margin + innerSize);
+  ctx.lineTo(margin, margin + innerSize);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Merkezdeki nokta
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size * 0.08, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Köşelerde küçük noktalar
+  const dotSize = size * 0.04;
+  const dotMargin = size * 0.15;
+
+  // Sol üst köşe noktası
+  ctx.beginPath();
+  ctx.arc(dotMargin, dotMargin, dotSize, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Sağ üst köşe noktası
+  ctx.beginPath();
+  ctx.arc(size - dotMargin, dotMargin, dotSize, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Sol alt köşe noktası
+  ctx.beginPath();
+  ctx.arc(dotMargin, size - dotMargin, dotSize, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Sağ alt köşe noktası
+  ctx.beginPath();
+  ctx.arc(size - dotMargin, size - dotMargin, dotSize, 0, 2 * Math.PI);
   ctx.fill();
 
   ctx.restore();
