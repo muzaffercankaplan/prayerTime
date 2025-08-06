@@ -215,8 +215,8 @@ async function createPrayerOverlayImage(
   // Dua card arka planı - daha hoş renk
   ctx.fillStyle = "#1a1a2e"; // Koyu lacivert - daha şık
   ctx.globalAlpha = 0.95; // Neredeyse tam opak
-  // Yuvarlatılmış dikdörtgen (border-radius) - daha küçük radius
-  const radius = Math.floor(cardH * 0.05); // Radius kısaltıldı
+  // Yuvarlatılmış dikdörtgen (border-radius) - daha da küçük radius
+  const radius = Math.floor(cardH * 0.03); // Radius daha da kısaltıldı
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(radius, 0);
@@ -348,21 +348,34 @@ function drawPrayerDecorations(ctx, width, height) {
   ctx.lineWidth = 1.5;
   ctx.globalAlpha = 0.85; // Opaklık ayarlandı
 
-  // Sol üst köşe - daha sola ve yukarı
-  drawCornerDecoration(ctx, margin, margin, cornerSize);
+  // Sol üst köşe - Allah (الله)
+  drawCornerDecorationWithSymbol(ctx, margin, margin, cornerSize, "الله");
 
-  // Sağ üst köşe - daha yukarı
-  drawCornerDecoration(ctx, width - cornerSize - margin, margin, cornerSize);
+  // Sağ üst köşe - Muhammed (محمد)
+  drawCornerDecorationWithSymbol(
+    ctx,
+    width - cornerSize - margin,
+    margin,
+    cornerSize,
+    "محمد"
+  );
 
-  // Sol alt köşe - daha sola
-  drawCornerDecoration(ctx, margin, height - cornerSize - margin, cornerSize);
+  // Sol alt köşe - Bismillah (بسم)
+  drawCornerDecorationWithSymbol(
+    ctx,
+    margin,
+    height - cornerSize - margin,
+    cornerSize,
+    "بسم"
+  );
 
-  // Sağ alt köşe - daha sola ve yukarı
-  drawCornerDecoration(
+  // Sağ alt köşe - Subhanallah (سبحان)
+  drawCornerDecorationWithSymbol(
     ctx,
     width - cornerSize - margin,
     height - cornerSize - margin,
-    cornerSize
+    cornerSize,
+    "سبحان"
   );
 
   // Ortada hafif bir ışık efekti
@@ -383,7 +396,7 @@ function drawPrayerDecorations(ctx, width, height) {
 }
 
 /**
- * Köşe dekorasyonu çizer
+ * Köşe dekorasyonu çizer - Arapça harfler ve İslami semboller
  * @param {CanvasRenderingContext2D} ctx - Canvas context
  * @param {number} x - X koordinatı
  * @param {number} y - Y koordinatı
@@ -392,10 +405,6 @@ function drawPrayerDecorations(ctx, width, height) {
 function drawCornerDecoration(ctx, x, y, size) {
   ctx.save();
   ctx.translate(x, y);
-
-  // İslami geometrik desen - daha estetik ve düzgün
-  const innerSize = size * 0.6;
-  const margin = (size - innerSize) / 2;
 
   // Dış çerçeve
   ctx.beginPath();
@@ -406,43 +415,63 @@ function drawCornerDecoration(ctx, x, y, size) {
   ctx.closePath();
   ctx.stroke();
 
-  // İç geometrik desen
+  // Arapça harfler ve İslami semboller
+  const fontSize = size * 0.4;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#d4af37";
+
+  // Köşe pozisyonlarına göre farklı semboller
+  const centerX = size / 2;
+  const centerY = size / 2;
+
+  // Pozisyon kontrolü için global değişken kullanacağız
+  // Şimdilik basit bir yaklaşım - sırayla farklı semboller
+  const symbols = ["الله", "محمد", "بسم", "سبحان"];
+  const symbolIndex = Math.floor(Math.random() * symbols.length);
+  ctx.fillText(symbols[symbolIndex], centerX, centerY);
+
+  ctx.restore();
+}
+
+/**
+ * Belirli bir sembolle köşe dekorasyonu çizer
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} x - X koordinatı
+ * @param {number} y - Y koordinatı
+ * @param {number} size - Boyut
+ * @param {string} symbol - Gösterilecek Arapça sembol
+ */
+function drawCornerDecorationWithSymbol(ctx, x, y, size, symbol) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Hafif yuvarlatılmış dış çerçeve
+  const cornerRadius = size * 0.1; // Hafif radius
   ctx.beginPath();
-  ctx.moveTo(margin, margin);
-  ctx.lineTo(margin + innerSize, margin);
-  ctx.lineTo(margin + innerSize, margin + innerSize);
-  ctx.lineTo(margin, margin + innerSize);
+  ctx.moveTo(cornerRadius, 0);
+  ctx.lineTo(size - cornerRadius, 0);
+  ctx.quadraticCurveTo(size, 0, size, cornerRadius);
+  ctx.lineTo(size, size - cornerRadius);
+  ctx.quadraticCurveTo(size, size, size - cornerRadius, size);
+  ctx.lineTo(cornerRadius, size);
+  ctx.quadraticCurveTo(0, size, 0, size - cornerRadius);
+  ctx.lineTo(0, cornerRadius);
+  ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
   ctx.closePath();
   ctx.stroke();
 
-  // Merkezdeki nokta
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size * 0.08, 0, 2 * Math.PI);
-  ctx.fill();
+  // Arapça harf
+  const fontSize = size * 0.35;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#d4af37";
 
-  // Köşelerde küçük noktalar
-  const dotSize = size * 0.04;
-  const dotMargin = size * 0.15;
-
-  // Sol üst köşe noktası
-  ctx.beginPath();
-  ctx.arc(dotMargin, dotMargin, dotSize, 0, 2 * Math.PI);
-  ctx.fill();
-
-  // Sağ üst köşe noktası
-  ctx.beginPath();
-  ctx.arc(size - dotMargin, dotMargin, dotSize, 0, 2 * Math.PI);
-  ctx.fill();
-
-  // Sol alt köşe noktası
-  ctx.beginPath();
-  ctx.arc(dotMargin, size - dotMargin, dotSize, 0, 2 * Math.PI);
-  ctx.fill();
-
-  // Sağ alt köşe noktası
-  ctx.beginPath();
-  ctx.arc(size - dotMargin, size - dotMargin, dotSize, 0, 2 * Math.PI);
-  ctx.fill();
+  const centerX = size / 2;
+  const centerY = size / 2;
+  ctx.fillText(symbol, centerX, centerY);
 
   ctx.restore();
 }
