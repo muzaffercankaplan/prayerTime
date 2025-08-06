@@ -6,11 +6,13 @@ const prayerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-
+    date: {
+      type: Date,
+      default: Date.now,
+    },
     prayers: {
       morning: String,
       night: String,
-      friday: String,
     },
   },
   {

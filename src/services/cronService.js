@@ -1,140 +1,113 @@
 const cron = require("node-cron");
 const { generateDailyPrayers } = require("./aiService");
 const { postPrayerToInstagram } = require("../instagram/postPrayerToInstagram");
+const { sendErrorNotification } = require("./emailService");
 const Prayer = require("../models/Prayer");
 
-let isRunning = false;
+// Random cron job'ları import et
+const { startRandomCronJobs } = require("./randomCronService");
 
-// Rastgele saat belirleme (08:00-22:00 arası)
-const getRandomPostTime = () => {
-  const startHour = 8; // 08:00
-  const endHour = 22; // 22:00
+// İstanbul timezone ayarları
+const ISTANBUL_TIMEZONE = "Europe/Istanbul";
 
-  const randomHour =
-    Math.floor(Math.random() * (endHour - startHour + 1)) + startHour;
-  const randomMinute = Math.floor(Math.random() * 60);
+// Singleton pattern için global değişkenler
+let cronJobsStarted = false;
+let cronJobs = [];
 
-  return {
-    hour: randomHour,
-    minute: randomMinute,
-    timeString: `${randomHour.toString().padStart(2, "0")}:${randomMinute
-      .toString()
-      .padStart(2, "0")}`,
-  };
-};
-
-// Günlük dua üretimi ve paylaşımı
-const generateAndSchedulePrayers = async () => {
-  try {
-    console.log("=== Günlük Dua Üretimi Başlatılıyor ===");
-
-    // AI ile dualar üret
-    const prayers = await generateDailyPrayers();
-
-    // Veritabanına kaydet
-    const prayer = new Prayer({
-      type: "daily",
-      date: new Date(),
-      prayers: {
-        morning: prayers.morning,
-        night: prayers.night,
-      },
-    });
-
-    await prayer.save();
-    console.log("Dualar veritabanına kaydedildi:", prayer._id);
-
-    // Rastgele paylaşım saati belirle
-    const postTime = getRandomPostTime();
-    console.log(`Paylaşım saati belirlendi: ${postTime.timeString}`);
-
-    // Paylaşım zamanını hesapla
-    const now = new Date();
-    const postDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      postTime.hour,
-      postTime.minute
-    );
-
-    // Eğer belirlenen saat geçmişse, yarın için planla
-    if (postDate <= now) {
-      postDate.setDate(postDate.getDate() + 1);
+// Cron job'ları durdurma fonksiyonu
+const stopAllCronJobs = () => {
+  cronJobs.forEach((job) => {
+    if (job && typeof job.stop === "function") {
+      job.stop();
     }
-
-    const delayMs = postDate.getTime() - now.getTime();
-
-    console.log(
-      `Paylaşım ${postTime.timeString} saatinde yapılacak (${Math.round(
-        delayMs / 1000 / 60
-      )} dakika sonra)`
-    );
-
-    // Zamanlanmış paylaşım
-    setTimeout(async () => {
-      try {
-        await postPrayerToInstagram(prayer._id);
-        console.log("Zamanlanmış paylaşım tamamlandı");
-      } catch (error) {
-        console.error("Zamanlanmış paylaşım hatası:", error);
-      }
-    }, delayMs);
-
-    return {
-      prayerId: prayer._id,
-      postTime: postTime.timeString,
-      scheduledFor: postDate,
-    };
-  } catch (error) {
-    console.error("Günlük dua üretimi hatası:", error);
-    throw error;
-  }
+  });
+  cronJobs = [];
+  cronJobsStarted = false;
+  console.log("Tüm cron job'lar durduruldu");
 };
 
-// Cron servisini başlat
-const startCronService = () => {
-  if (isRunning) {
-    console.log("Cron servisi zaten çalışıyor");
-    return;
-  }
+// Dua üretme servisi (her gün gece 5'te çalışır)
+const schedulePrayerGeneration = () => {
+  console.log("Dua üretme servisi başlatılıyor...");
 
-  console.log("Cron servisi başlatılıyor...");
-
-  // Her gün 07:00'de çalış
-  cron.schedule(
-    "0 7 * * *",
+  const job = cron.schedule(
+    "0 5 * * *",
     async () => {
-      console.log("=== CRON: Günlük dua üretimi başlatılıyor ===");
+      console.log("=== Dua Üretme Servisi Çalışıyor ===");
       try {
-        await generateAndSchedulePrayers();
+        // AI ile dualar üret
+        const prayers = await generateDailyPrayers();
+
+        // Veritabanına kaydet
+        const prayer = new Prayer({
+          type: "daily",
+          date: new Date(),
+          prayers: {
+            morning: prayers.morning,
+            night: prayers.night,
+          },
+        });
+
+        await prayer.save();
+
+        return { success: true, prayerId: prayer._id };
       } catch (error) {
-        console.error("Cron görevi hatası:", error);
+        console.error("Dua üretme hatası:", error);
+        try {
+          await sendErrorNotification("Dua Üretme Servisi", error, {
+            İşlem: "Günlük dua üretimi",
+            Zaman: new Date().toLocaleString("tr-TR"),
+          });
+        } catch (emailError) {
+          console.error("Hata bildirimi gönderilemedi:", emailError);
+        }
+        throw error;
       }
     },
     {
-      timezone: "Europe/Istanbul",
+      timezone: ISTANBUL_TIMEZONE,
     }
   );
+  cronJobs.push(job);
 
-  isRunning = true;
-  console.log("Cron servisi başlatıldı - Her gün 07:00'de çalışacak");
+  console.log(
+    "Dua üretme servisi başlatıldı - Her gün gece 05:00'de çalışacak"
+  );
 };
 
-// Manuel test fonksiyonu
-const testDailyProcess = async () => {
-  console.log("=== MANUEL TEST: Günlük süreç test ediliyor ===");
-  try {
-    const result = await generateAndSchedulePrayers();
-    console.log("Test sonucu:", result);
-    return result;
-  } catch (error) {
-    console.error("Test hatası:", error);
-    throw error;
+// Tüm cron job'ları başlat
+const startAllCronJobs = () => {
+  // Eğer cron job'lar zaten başlatılmışsa, tekrar başlatma
+  if (cronJobsStarted) {
+    console.log("Cron job'lar zaten başlatılmış, tekrar başlatılmıyor");
+    return;
   }
+
+  console.log("Cron job'lar başlatılıyor...");
+
+  schedulePrayerGeneration();
+
+  // Random saatli job'ları başlat
+  startRandomCronJobs();
+
+  cronJobsStarted = true;
+  console.log("Tüm cron job'lar başlatıldı");
 };
+
+// Process sonlandırma sinyallerini dinle
+process.on("SIGTERM", () => {
+  console.log("SIGTERM sinyali alındı, cron job'lar durduruluyor...");
+  stopAllCronJobs();
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("SIGINT sinyali alındı, cron job'lar durduruluyor...");
+  stopAllCronJobs();
+  process.exit(0);
+});
 
 module.exports = {
-  startCronService,
-  testDailyProcess,
+  startAllCronJobs,
+  stopAllCronJobs,
 };

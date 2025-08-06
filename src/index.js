@@ -1,37 +1,50 @@
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const { connectDB } = require("./config/database");
-const {
-  startCronService,
-  testDailyProcess,
-} = require("./services/cronService");
+const { startAllCronJobs } = require("./services/cronService");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Static file serving - publish klasörü için
+app.use("/prayer-assets", express.static(path.join(__dirname, "publish")));
+
 // MongoDB bağlantısı
 connectDB();
 
-// Cron servisini başlat
-startCronService();
+// Cron servislerini başlat
+startAllCronJobs(); // Tüm cron servislerini başlat
 
-app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
-});
-
-// Test endpoint'i
-app.get("/test", async (req, res) => {
-  try {
-    const result = await testDailyProcess();
-    res.json({ success: true, result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+// Root endpoint - basit mesaj
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Prayer Time API",
+    status: "running",
+    version: "1.0.0",
+  });
 });
 
 // Duaları oluştur endpoint'i
 app.post("/api/generate/prayer", async (req, res) => {
   try {
+    const { password } = req.body;
+
+    // Şifre kontrolü
+    const correctPassword = process.env.GENERATE_PASSWORD || "admin123";
+
+    if (!password || password !== correctPassword) {
+      return res.status(401).json({
+        success: false,
+        error:
+          "Geçersiz şifre. Dua oluşturmak için doğru şifreyi girmelisiniz.",
+      });
+    }
+
     const { generateDailyPrayers } = require("./services/aiService");
     const Prayer = require("./models/Prayer");
 
@@ -65,47 +78,6 @@ app.post("/api/generate/prayer", async (req, res) => {
     });
   } catch (error) {
     console.error("Dua üretme hatası:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
-
-// Cuma mesajı oluştur endpoint'i
-app.post("/api/generate/friday", async (req, res) => {
-  try {
-    const { generateFridayMessage } = require("./services/aiService");
-    const Prayer = require("./models/Prayer");
-
-    // AI ile cuma mesajı üret
-    const fridayMessage = await generateFridayMessage();
-
-    // Önce eski cuma mesajlarını sil
-    await Prayer.deleteMany({ type: "friday" });
-
-    // Yeni cuma mesajını kaydet
-    const prayer = new Prayer({
-      type: "friday",
-      date: new Date(),
-      prayers: {
-        friday: fridayMessage,
-      },
-    });
-
-    await prayer.save();
-
-    res.json({
-      success: true,
-      message: "Cuma mesajı başarıyla oluşturuldu",
-      data: {
-        prayerId: prayer._id,
-        friday: fridayMessage,
-        createdAt: prayer.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error("Cuma mesajı üretme hatası:", error);
     res.status(500).json({
       success: false,
       error: error.message,

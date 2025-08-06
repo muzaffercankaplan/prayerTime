@@ -10,6 +10,22 @@ const client = ModelClient(endpoint, new AzureKeyCredential(token));
 
 const generateDailyPrayers = async () => {
   try {
+    // Türkiye saati ile bugünün gününü kontrol et
+    const today = new Date();
+    const turkeyTime = new Date(
+      today.toLocaleString("en-US", { timeZone: "Europe/Istanbul" })
+    );
+    const dayOfWeek = turkeyTime.getDay(); // 0 = Pazar, 5 = Cuma
+    const isFriday = dayOfWeek === 5;
+
+    let morningPrayerPrompt =
+      "Motivasyonel, şükran dolu ve güne başlarken pozitif bir enerji veren bir dua yaz.";
+
+    if (isFriday) {
+      morningPrayerPrompt =
+        "Cuma günü için özel bir sabah duası yaz. 'Hayırlı Cumalar' temasını içeren, Cuma gününün bereketini ve önemini vurgulayan, haftanın en kutsal günü için uygun bir dua olsun.";
+    }
+
     const prompt = `
     Gündüz ve gece için iki kısa dua yazmanı istiyorum. Dualar Türkçe olacak ve dini/manevi içerikli olacak.
     
@@ -18,7 +34,7 @@ const generateDailyPrayers = async () => {
     - Günlük yaşamda okunmaya uygun olmalı
     
     İçerik:
-    1. Sabah Duası: Motivasyonel, şükran dolu ve güne başlarken pozitif bir enerji veren bir dua yaz.
+    1. Sabah Duası: ${morningPrayerPrompt}
     2. Gece Duası: Huzur veren, Allah'a sığınmayı içeren ve gece için uygun bir korunma duası yaz.
     
     Lütfen şu formatta yaz:
@@ -101,61 +117,6 @@ const extractPrayer = (text, prayerType) => {
   return "";
 };
 
-const generateFridayMessage = async () => {
-  try {
-    const prompt = `
-    Cuma günü için özel bir "Hayırlı Cumalar" mesajı yaz. Bu mesaj:
-    
-    - Cuma gününün önemini vurgulamalı
-    - Hayırlı ve bereketli olmasını dilemeli
-    - Dini ve manevi içerikli olmalı
-    - 2-3 cümle uzunluğunda olmalı
-    - Türkçe olmalı
-    
-    Lütfen şu formatta yaz:
-    
-    Cuma Mesajı: [cuma mesajı]
-    `;
-
-    console.log("Cuma mesajı için Azure AI API isteği gönderiliyor...");
-    const response = await client.path("/chat/completions").post({
-      body: {
-        messages: [
-          {
-            role: "system",
-            content:
-              "Sen deneyimli bir dua yazarı ve dini metin uzmanısın. Cuma günü için özel mesajlar yazıyorsun.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        top_p: 1,
-        model: model,
-      },
-    });
-
-    if (isUnexpected(response)) {
-      throw response.body.error;
-    }
-
-    console.log("Cuma mesajı için Azure AI API yanıtı alındı");
-    const aiResponse = response.body.choices[0].message.content;
-    console.log("Cuma Mesajı API Yanıtı:", aiResponse);
-
-    // AI yanıtını işle
-    const fridayMessage = extractPrayer(aiResponse, "Cuma Mesajı");
-
-    return fridayMessage;
-  } catch (error) {
-    console.error("Cuma mesajı oluşturma hatası:", error);
-    throw new Error(`Cuma mesajı oluşturulamadı: ${error.message}`);
-  }
-};
-
 module.exports = {
   generateDailyPrayers,
-  generateFridayMessage,
 };
