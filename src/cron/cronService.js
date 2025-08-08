@@ -1,7 +1,9 @@
 const cron = require("node-cron");
-const { generateDailyPrayers } = require("./aiService");
-const { postPrayerToInstagram } = require("../instagram/postPrayerToInstagram");
-const { sendErrorNotification } = require("./emailService");
+const {
+  generateDailyPrayers,
+  generateUniversePrayers,
+} = require("../services/aiService");
+const { sendErrorNotification } = require("../services/emailService");
 const Prayer = require("../models/Prayer");
 
 // Random cron job'ları import et
@@ -28,29 +30,46 @@ const stopAllCronJobs = () => {
 
 // Dua üretme servisi (her gün gece 5'te çalışır)
 const schedulePrayerGeneration = () => {
-  console.log("Dua üretme servisi başlatılıyor...");
-
   const job = cron.schedule(
     "0 5 * * *",
     async () => {
       console.log("=== Dua Üretme Servisi Çalışıyor ===");
       try {
-        // AI ile dualar üret
-        const prayers = await generateDailyPrayers();
+        // AI ile daily dualar üret
+        const dailyPrayers = await generateDailyPrayers();
 
-        // Veritabanına kaydet
-        const prayer = new Prayer({
+        // Daily duaları veritabanına kaydet
+        const dailyPrayer = new Prayer({
           type: "daily",
           date: new Date(),
           prayers: {
-            morning: prayers.morning,
-            night: prayers.night,
+            morning: dailyPrayers.morning,
+            night: dailyPrayers.night,
           },
         });
 
-        await prayer.save();
+        await dailyPrayer.save();
 
-        return { success: true, prayerId: prayer._id };
+        // AI ile universe dualar üret
+        const universePrayers = await generateUniversePrayers();
+
+        // Universe duaları veritabanına kaydet
+        const universePrayer = new Prayer({
+          type: "universe",
+          date: new Date(),
+          prayers: {
+            morning: universePrayers.morning,
+            night: universePrayers.night,
+          },
+        });
+
+        await universePrayer.save();
+
+        return {
+          success: true,
+          dailyPrayerId: dailyPrayer._id,
+          universePrayerId: universePrayer._id,
+        };
       } catch (error) {
         console.error("Dua üretme hatası:", error);
         try {
@@ -69,10 +88,6 @@ const schedulePrayerGeneration = () => {
     }
   );
   cronJobs.push(job);
-
-  console.log(
-    "Dua üretme servisi başlatıldı - Her gün gece 05:00'de çalışacak"
-  );
 };
 
 // Tüm cron job'ları başlat

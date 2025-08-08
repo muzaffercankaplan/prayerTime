@@ -90,6 +90,74 @@ const generateDailyPrayers = async () => {
   }
 };
 
+const generateUniversePrayers = async () => {
+  try {
+    let morningPrayerPrompt =
+      "Evrensel enerji, kozmik bilinç ve ilahi güçle bağlantı kuran, evrenin sonsuzluğunu hisseden bir sabah duası yaz.";
+
+    const prompt = `
+    Evrensel ve kozmik temalı gündüz ve gece duaları yazmanı istiyorum. Dualar Türkçe olacak ve evrensel enerji, kozmik bilinç, ilahi güç temalarını içerecek.
+    
+    Kurallar:
+    - Her dua 2-3 cümle uzunluğunda olmalı
+    - Evrensel enerji ve kozmik bilinç temasını içermeli
+    - Günlük yaşamda okunmaya uygun olmalı
+    
+    İçerik:
+    1. Sabah Duası: ${morningPrayerPrompt}
+    2. Gece Duası: Evrensel huzur veren, kozmik enerjiyle korunmayı içeren ve gece için uygun bir evrensel dua yaz.
+    
+    Lütfen şu formatta yaz:
+    
+    Sabah Duası: [sabah duası metni]  
+    Gece Duası: [gece duası metni]
+    `;
+
+    console.log("Azure AI API isteği gönderiliyor (Universe)...");
+    const response = await client.path("/chat/completions").post({
+      body: {
+        messages: [
+          {
+            role: "system",
+            content:
+              "Sen deneyimli bir evrensel dua yazarı ve kozmik metin uzmanısın. Kullanıcılara sabah, gece ve cuma günü için kısa, etkili, Türkçe evrensel dualar yazıyorsun. Duaların evrensel enerji, kozmik bilinç ve ilahi güç temalarını içeren, günlük hayata uygun, anlamlı ve ruhu besleyen nitelikte olmalı.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        top_p: 1,
+        model: model,
+      },
+    });
+
+    if (isUnexpected(response)) {
+      throw response.body.error;
+    }
+
+    const aiResponse = response.body.choices[0].message.content;
+
+    // AI yanıtını işle ve yapılandırılmış veriye dönüştür
+    const morningPrayer = extractPrayer(aiResponse, "Sabah Duası");
+    const nightPrayer = extractPrayer(aiResponse, "Gece Duası");
+
+    return {
+      morning: morningPrayer,
+      night: nightPrayer,
+    };
+  } catch (error) {
+    console.error("Azure AI hatası detayları (Universe):", {
+      message: error.message,
+      code: error.code,
+      type: error.type,
+      status: error.status,
+    });
+    throw new Error(`Evrensel dualar oluşturulamadı: ${error.message}`);
+  }
+};
+
 const extractPrayer = (text, prayerType) => {
   // Markdown formatını temizle
   const cleanText = text.replace(/\*\*/g, "").replace(/\*/g, "");
@@ -119,4 +187,5 @@ const extractPrayer = (text, prayerType) => {
 
 module.exports = {
   generateDailyPrayers,
+  generateUniversePrayers,
 };

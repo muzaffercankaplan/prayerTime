@@ -5,6 +5,8 @@ const prayerSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
+      enum: ["daily", "universe"],
+      default: "daily",
     },
     date: {
       type: Date,

@@ -4,7 +4,7 @@ const DailyExecution = require("../models/DailyExecution");
 const {
   sendInfoNotification,
   sendErrorNotification,
-} = require("./emailService");
+} = require("../services/emailService");
 const { postPrayerToInstagram } = require("../instagram/postPrayerToInstagram");
 
 // İstanbul timezone ayarları
