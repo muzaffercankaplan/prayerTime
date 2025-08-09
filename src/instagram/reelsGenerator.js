@@ -17,6 +17,7 @@ ffmpeg.setFfprobePath(ffprobePath);
  * @param {string} outputPath - Çıkış videosu dosya yolu
  * @param {string} [musicPath] - Opsiyonel müzik dosya yolu
  * @param {string} [bottomMessage] - Alt mesaj
+ * @param {boolean} [isUniverse] - Evrensel tema için
  * @returns {Promise<string>} - Çıktı video dosya yolu
  */
 async function generatePrayerReelsVideo({
@@ -26,16 +27,26 @@ async function generatePrayerReelsVideo({
   outputPath,
   musicPath,
   bottomMessage,
+  isUniverse = false,
 }) {
   // 1. Kart overlay görselini oluştur
   let overlayPath;
   try {
-    overlayPath = await createPrayerOverlayImage(
-      videoPath,
-      prayerTitle,
-      prayerText,
-      bottomMessage
-    );
+    if (isUniverse) {
+      overlayPath = await createUniverseOverlayImage(
+        videoPath,
+        prayerTitle,
+        prayerText,
+        bottomMessage
+      );
+    } else {
+      overlayPath = await createPrayerOverlayImage(
+        videoPath,
+        prayerTitle,
+        prayerText,
+        bottomMessage
+      );
+    }
   } catch (err) {
     console.error("❌ Overlay görseli oluşturulamadı:", err.message, err);
     throw err;
@@ -43,7 +54,10 @@ async function generatePrayerReelsVideo({
 
   // 2. Logo overlay görselini hazırla (opsiyonel)
   const { loadImage, createCanvas } = require("canvas");
-  const logoPath = require("path").join(__dirname, "../assets/logo.png");
+
+  // isUniverse parametresine göre logo seç
+  const logoFileName = isUniverse ? "universe.png" : "prayer.png";
+  const logoPath = require("path").join(__dirname, "../assets", logoFileName);
   let logoOverlayPath = null;
 
   // Logo dosyası varsa kullan
@@ -67,7 +81,7 @@ async function generatePrayerReelsVideo({
       const ctx = canvas.getContext("2d");
       const logo = await loadImage(logoPath);
       ctx.save();
-      ctx.globalAlpha = 0.7; // Opaklık düşürüldü
+      ctx.globalAlpha = 1; // Tam opaklık
       ctx.beginPath();
       ctx.arc(logoSize / 2, logoSize / 2, logoSize / 2, 0, 2 * Math.PI);
       ctx.closePath();
@@ -87,7 +101,9 @@ async function generatePrayerReelsVideo({
       logoOverlayPath = null;
     }
   } else {
-    console.log("ℹ️ Logo dosyası bulunamadı, logo olmadan devam ediliyor");
+    console.log(
+      `ℹ️ ${logoFileName} dosyası bulunamadı, logo olmadan devam ediliyor`
+    );
   }
 
   return new Promise((resolve, reject) => {
@@ -292,6 +308,120 @@ async function createPrayerOverlayImage(
 }
 
 /**
+ * Evrensel tema için overlay görseli oluşturur
+ * @param {string} videoPath - Video dosya yolu
+ * @param {string} prayerTitle - Başlık
+ * @param {string} prayerText - Dua metni
+ * @param {string} bottomMessage - Alt mesaj
+ * @returns {Promise<string>} - Overlay dosya yolu
+ */
+async function createUniverseOverlayImage(
+  videoPath,
+  prayerTitle,
+  prayerText,
+  bottomMessage
+) {
+  // Videodan çözünürlük al
+  const getVideoSize = () =>
+    new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(videoPath, (err, metadata) => {
+        if (err) return reject(err);
+        const { width, height } =
+          metadata.streams.find((s) => s.width && s.height) || {};
+        if (!width || !height)
+          return reject(new Error("Video çözünürlüğü alınamadı."));
+        resolve({ width, height });
+      });
+    });
+  const { width, height } = await getVideoSize();
+  const cardW = Math.floor(width * 0.7);
+  const cardH = Math.floor(height * 0.4);
+
+  const canvas = createCanvas(cardW, cardH);
+  const ctx = canvas.getContext("2d");
+
+  // Evrensel tema arka planı - kozmik mavi tonları
+  const gradient = ctx.createLinearGradient(0, 0, cardW, cardH);
+  gradient.addColorStop(0, "#0a0a2e"); // Koyu kozmik mavi
+  gradient.addColorStop(0.5, "#16213e"); // Orta kozmik mavi
+  gradient.addColorStop(1, "#0f3460"); // Açık kozmik mavi
+
+  ctx.globalAlpha = 0.95;
+  const radius = Math.floor(cardH * 0.03);
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(cardW - radius, 0);
+  ctx.quadraticCurveTo(cardW, 0, cardW, radius);
+  ctx.lineTo(cardW, cardH - radius);
+  ctx.quadraticCurveTo(cardW, cardH, cardW - radius, cardH);
+  ctx.lineTo(radius, cardH);
+  ctx.quadraticCurveTo(0, cardH, 0, cardH - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, cardW, cardH);
+  ctx.restore();
+
+  // Kozmik ışık kenarlık
+  ctx.strokeStyle = "#4fc3f7"; // Kozmik mavi ışık
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 1;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Evrensel dekoratif elementler
+  drawUniverseDecorations(ctx, cardW, cardH);
+
+  // Dua metni - ortada
+  const textFontSize = 48;
+  const topMargin = Math.floor(cardH * 0.1);
+
+  if (prayerText) {
+    // Evrensel tema metin rengi - kozmik ışık
+    ctx.fillStyle = "#e3f2fd"; // Açık kozmik mavi
+    ctx.font = `bold ${textFontSize}px Arial, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Kozmik ışık gölgesi
+    ctx.shadowColor = "rgba(79, 195, 247, 0.6)";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    const centerY = cardH / 2;
+    wrapText(
+      ctx,
+      prayerText,
+      cardW / 2,
+      centerY,
+      cardW * 0.9,
+      textFontSize + 8
+    );
+
+    // Gölge efektini sıfırla
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+  }
+
+  // PNG olarak kaydet
+  const overlayPath = path.join(__dirname, "tmp_universe_overlay.png");
+  const out = fs.createWriteStream(overlayPath);
+  const stream = canvas.createPNGStream();
+  await new Promise((res, rej) => {
+    stream.pipe(out);
+    out.on("finish", res);
+    out.on("error", rej);
+  });
+  return overlayPath;
+}
+
+/**
  * Metni belirli genişlikte sarar ve dikey olarak ortalar
  * @param {CanvasRenderingContext2D} ctx - Canvas context
  * @param {string} text - Sarılacak metin
@@ -393,6 +523,111 @@ function drawPrayerDecorations(ctx, width, height) {
   ctx.fillRect(0, 0, width, height);
 
   ctx.globalAlpha = 1;
+}
+
+/**
+ * Evrensel tema dekorasyonları çizer
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} width - Genişlik
+ * @param {number} height - Yükseklik
+ */
+function drawUniverseDecorations(ctx, width, height) {
+  // Köşelerde evrensel semboller
+  const cornerSize = Math.min(width, height) * 0.12;
+  const margin = Math.min(width, height) * 0.05;
+
+  // Kozmik mavi renk
+  ctx.fillStyle = "#4fc3f7";
+  ctx.strokeStyle = "#4fc3f7";
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.85;
+
+  // Sol üst köşe - Yıldız sembolü
+  drawUniverseCornerDecoration(ctx, margin, margin, cornerSize, "★");
+
+  // Sağ üst köşe - Ay sembolü
+  drawUniverseCornerDecoration(
+    ctx,
+    width - cornerSize - margin,
+    margin,
+    cornerSize,
+    "☾"
+  );
+
+  // Sol alt köşe - Güneş sembolü
+  drawUniverseCornerDecoration(
+    ctx,
+    margin,
+    height - cornerSize - margin,
+    cornerSize,
+    "☀"
+  );
+
+  // Sağ alt köşe - Sonsuzluk sembolü
+  drawUniverseCornerDecoration(
+    ctx,
+    width - cornerSize - margin,
+    height - cornerSize - margin,
+    cornerSize,
+    "∞"
+  );
+
+  // Ortada kozmik ışık efekti
+  const gradient = ctx.createRadialGradient(
+    width / 2,
+    height / 2,
+    0,
+    width / 2,
+    height / 2,
+    height / 2
+  );
+  gradient.addColorStop(0, "rgba(79, 195, 247, 0.15)");
+  gradient.addColorStop(1, "rgba(79, 195, 247, 0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Evrensel köşe dekorasyonu çizer
+ * @param {CanvasRenderingContext2D} ctx - Canvas context
+ * @param {number} x - X koordinatı
+ * @param {number} y - Y koordinatı
+ * @param {number} size - Boyut
+ * @param {string} symbol - Gösterilecek sembol
+ */
+function drawUniverseCornerDecoration(ctx, x, y, size, symbol) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Yuvarlatılmış dış çerçeve
+  const radius = size * 0.1;
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(size - radius, 0);
+  ctx.quadraticCurveTo(size, 0, size, radius);
+  ctx.lineTo(size, size - radius);
+  ctx.quadraticCurveTo(size, size, size - radius, size);
+  ctx.lineTo(radius, size);
+  ctx.quadraticCurveTo(0, size, 0, size - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Evrensel sembol
+  const fontSize = size * 0.5;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#4fc3f7";
+
+  const centerX = size / 2;
+  const centerY = size / 2;
+  ctx.fillText(symbol, centerX, centerY);
+
+  ctx.restore();
 }
 
 /**

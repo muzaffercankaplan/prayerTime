@@ -93,19 +93,20 @@ const generateDailyPrayers = async () => {
 const generateUniversePrayers = async () => {
   try {
     let morningPrayerPrompt =
-      "Evrensel enerji, kozmik bilinç ve ilahi güçle bağlantı kuran, evrenin sonsuzluğunu hisseden bir sabah duası yaz.";
+      "Evrene pozitif enerji gönderen, evrenin iyiliğini ve huzurunu yayan, sonsuz sevgi ve ışığını hisseden bir sabah duası yaz.";
 
     const prompt = `
-    Evrensel ve kozmik temalı gündüz ve gece duaları yazmanı istiyorum. Dualar Türkçe olacak ve evrensel enerji, kozmik bilinç, ilahi güç temalarını içerecek.
+    Evrene pozitif enerji verme ve evrensel iyilik yayma temalı gündüz ve gece duaları yazmanı istiyorum. Dualar Türkçe olacak ve evrene pozitif enerji gönderme, evrenin iyiliğini yayma, evrensel sevgi ve ışık temalarını içerecek.
     
     Kurallar:
     - Her dua 2-3 cümle uzunluğunda olmalı
-    - Evrensel enerji ve kozmik bilinç temasını içermeli
+    - Evrene pozitif enerji gönderme temasını içermeli
+    - Evrenin iyiliğini yayma odaklı olmalı
     - Günlük yaşamda okunmaya uygun olmalı
     
     İçerik:
     1. Sabah Duası: ${morningPrayerPrompt}
-    2. Gece Duası: Evrensel huzur veren, kozmik enerjiyle korunmayı içeren ve gece için uygun bir evrensel dua yaz.
+    2. Gece Duası: Evrene pozitif enerji gönderen, evrenin huzurunu yayan ve gece boyunca evrensel iyiliği destekleyen bir dua yaz.
     
     Lütfen şu formatta yaz:
     
@@ -113,14 +114,13 @@ const generateUniversePrayers = async () => {
     Gece Duası: [gece duası metni]
     `;
 
-    console.log("Azure AI API isteği gönderiliyor (Universe)...");
     const response = await client.path("/chat/completions").post({
       body: {
         messages: [
           {
             role: "system",
             content:
-              "Sen deneyimli bir evrensel dua yazarı ve kozmik metin uzmanısın. Kullanıcılara sabah, gece ve cuma günü için kısa, etkili, Türkçe evrensel dualar yazıyorsun. Duaların evrensel enerji, kozmik bilinç ve ilahi güç temalarını içeren, günlük hayata uygun, anlamlı ve ruhu besleyen nitelikte olmalı.",
+              "Sen deneyimli bir evrensel enerji uzmanı ve metin yazarısın. Kullanıcılara evrene pozitif enerji gönderme, evrenin iyiliğini yayma temalı kısa, etkili, Türkçe dualar yazıyorsun. Duaların evrensel sevgi, ışık ve pozitif enerji yayma odaklı, günlük hayata uygun, anlamlı ve evreni besleyen nitelikte olmalı.",
           },
           {
             role: "user",
@@ -148,13 +148,15 @@ const generateUniversePrayers = async () => {
       night: nightPrayer,
     };
   } catch (error) {
-    console.error("Azure AI hatası detayları (Universe):", {
+    console.error("Azure AI hatası detayları (Evrene Pozitif Enerji):", {
       message: error.message,
       code: error.code,
       type: error.type,
       status: error.status,
     });
-    throw new Error(`Evrensel dualar oluşturulamadı: ${error.message}`);
+    throw new Error(
+      `Evrene pozitif enerji duaları oluşturulamadı: ${error.message}`
+    );
   }
 };
 

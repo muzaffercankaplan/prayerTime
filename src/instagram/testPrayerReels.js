@@ -35,7 +35,7 @@ async function testPrayerReels() {
       videoPath,
       prayerTitle: null,
       prayerText: testPrayer.prayers.morning,
-      outputPath: outputPath.replace(".mp4", "_morning.mp4"),
+      outputPath: path.join(__dirname, "../publish/morning-prayer.mp4"),
       bottomMessage: null,
     };
 
@@ -46,19 +46,15 @@ async function testPrayerReels() {
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // Gece duası testi
-    console.log("🌙 Gece duası testi...");
     const nightParams = {
       videoPath,
       prayerTitle: null,
       prayerText: testPrayer.prayers.night,
-      outputPath: outputPath.replace(".mp4", "_night.mp4"),
+      outputPath: path.join(__dirname, "../publish/night-prayer.mp4"),
       bottomMessage: null,
     };
 
-    // const nightResult = await generatePrayerReelsVideo(nightParams);
-    // console.log("✅ Gece duası videosu oluşturuldu:", nightResult);
-
-    console.log("🎉 Test tamamlandı! Videolar publish klasöründe oluşturuldu.");
+    const nightResult = await generatePrayerReelsVideo(nightParams);
   } catch (error) {
     console.error("❌ Test hatası:", error);
   }

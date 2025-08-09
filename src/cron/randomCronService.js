@@ -5,7 +5,10 @@ const {
   sendInfoNotification,
   sendErrorNotification,
 } = require("../services/emailService");
-const { postPrayerToInstagram } = require("../instagram/postPrayerToInstagram");
+const {
+  postPrayerToInstagram,
+  postPrayerUniverse,
+} = require("../instagram/postPrayerToInstagram");
 
 // İstanbul timezone ayarları
 const ISTANBUL_TIMEZONE = "Europe/Istanbul";
@@ -198,19 +201,37 @@ const getJobDefinitions = () => [
     endHour: 9,
     daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
     jobFunction: () => postPrayerToInstagram("morning"),
-    jobName: "Sabah Duası",
+    jobName: "DiniSabah Duası",
   },
   {
     startHour: 20,
     endHour: 22,
     daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
     jobFunction: () => postPrayerToInstagram("night"),
-    jobName: "Akşam Duası",
+    jobName: "Dini Akşam Duası",
+  },
+  {
+    startHour: 6,
+    endHour: 8,
+    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+    jobFunction: () => postPrayerUniverse("morning"),
+    jobName: "Evrensel Sabah Enerjisi",
+  },
+  {
+    startHour: 21,
+    endHour: 23,
+    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+    jobFunction: () => postPrayerUniverse("night"),
+    jobName: "Evrensel Gece Enerjisi",
   },
 ];
 
 // Job tipine göre time key belirle
 const getTimeKey = (jobName) => {
+  if (jobName.includes("Sabah") && jobName.includes("Evrensel"))
+    return "universe_morning";
+  if (jobName.includes("Gece") && jobName.includes("Evrensel"))
+    return "universe_night";
   if (jobName.includes("Sabah")) return "morning_prayer";
   if (jobName.includes("Akşam")) return "evening_prayer";
   return "";
